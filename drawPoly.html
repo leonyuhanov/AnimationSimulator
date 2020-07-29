@@ -76,23 +76,23 @@
 			<td class=textClass>Size Increment<br /><br />
 				<input type="range" id='vShiftLevel' min="1" max="100" value="1" onchange="sizeIncrement=parseInt(document.getElementById('vShiftLevel').value);" class="sliderClass">
 			</td>
-			<td class=textClass>Amplitude<br />
-				<input type="range" id='vShiftLevelDown' min="1" max="1000" value="40" step="1" onchange="amplitude=parseInt(document.getElementById('vShiftLevelDown').value);" class="sliderClass">
+			<td class=textClass>LFO SPeed<br />
+				<input type="range" id='lfoSpeed' min="0" max="1" value="0.01" step="0.01" onchange="lfoSpeed=parseFloat(document.getElementById('lfoSpeed').value);" class="sliderClass">
 			</td>
-			<td class=textClass>Rotation<br />
-				<input type="range" id='hShiftLevel' min="1" max="100" value="1" step="1" onchange="rotationIncrement=parseInt(document.getElementById('hShiftLevel').value);" class="sliderClass">
+			<td class=textClass>Sub Colour Increment<br /><br />
+				<input type="range" id='hShiftLevelLeft' min="1" max="255" value="1" step="1" onchange="subColourInc=parseInt(document.getElementById('hShiftLevelLeft').value);" class="sliderClass">
 			</td>
-			<td class=textClass>Poly Count<br /><br />
-				<input type="range" id='hShiftLevelLeft' min="3" max="32" value="3" step="1" onchange="polyCount=parseInt(document.getElementById('hShiftLevelLeft').value);" class="sliderClass">
+			<td class=textClass>Poly Depth<br />
+				<input type="range" id='hShiftLevel' min="1" max="1000" value="100" step="1" onchange="polyDepth=parseInt(document.getElementById('hShiftLevel').value);" class="sliderClass">
 			</td>
-			<td class=textClass>yyF<br /><br />
-				<input type="range" id='susLevel' min="0" max="20" value="1" step="0.1" onchange="shiftUpSubtLevel=parseFloat(document.getElementById('susLevel').value);" class="sliderClass">
+			<td class=textClass>Polly Size<br /><br />
+				<input type="range" id='polySize' min="1" max="3000" value="400" step="1" onchange="pollySize=parseInt(document.getElementById('polySize').value);recalcPollyPoints();" class="sliderClass">
 			</td>
-			<td class=textClass>X wave increment-er<br /><br /><br />
-				<input type="range" id='triangleFilterLvl' min="0" max="32" value="1" step="1" onchange="triangleFilterLevel=parseFloat(document.getElementById('triangleFilterLvl').value);" class="sliderClass">
+			<td class=textClass>Polly Points<br /><br /><br />
+				<input type="range" id='triangleFilterLvl' min="3" max="360" value="32" step="1" onchange="ppCount=parseInt(document.getElementById('triangleFilterLvl').value);recalcPollyPoints();" class="sliderClass">
 			</td>
-			<td class=textClass>Y wave increment-er<br /><br /><br /><br />
-				<input type="range" id='snowFlakeSubtractiveThreshholdLevel' min="1" max="360" value="45" step="1" onchange="sffSubtractiveLevel=parseInt(document.getElementById('snowFlakeSubtractiveThreshholdLevel').value);" class="sliderClass">
+			<td class=textClass>PP Divider<br /><br /><br /><br />
+				<input type="range" id='snowFlakeSubtractiveThreshholdLevel' min="2" max="180" value="4" step="1" onchange="ppDivCount=parseInt(document.getElementById('snowFlakeSubtractiveThreshholdLevel').value);recalcPollyPoints();" class="sliderClass">
 			</td>
 		</tr>
 	</table>
@@ -101,8 +101,6 @@
 
 </body>
 <script language="JavaScript">
-setInterval(render, 50);
-
 class colourObject
 {	
 	constructor(maxValue, colourBlockCount, rgbColourArray)
@@ -211,7 +209,7 @@ var bitmapDimensions = [window.innerWidth,window.innerHeight-200];
 var canObject = document.getElementById("bitmap");
 var canvasObject = canObject.getContext("2d");
 
-var cIndex=0;
+var cIndex=0, innerCIndex=0;
 var framCnt=0;
 var cnt=0;
 var objectTracker=0;
@@ -224,75 +222,119 @@ var amplitude=200;
 var sizeIncrement=1;
 var rotationIncrement=1;
 var polyCount = 3;
+var ppCount = 32;
+var ppDivCount = 4;
+var pollySize = 400;
+var polyDepth = 100;
+var subColourInc = 1;
+var lfoSpeed = 0.01;
 
 //Tracking Objects
-var tObjects = new Array();
 var objectCounters = [40, 40, 0, 0, 10];
 var objectPadding = 40;
+var circCoords;
+var polyPoints = Array();
+var waveIndex = 0;
+
+setInterval(render, 20);
 
 function init()
 {
-	var xIndex, yIndex, yTrack, oCirc=0, degCount=0;
-	
 	document.getElementById('bitmap').width = bitmapDimensions[0];
 	document.getElementById('bitmap').height = bitmapDimensions[1];
 	document.getElementById('bitmap').style.backgroundColor='rgba(0,0,0,1)';
-	
-	//init objects
-	objectCounters[2] = bitmapDimensions[0]/objectCounters[0];
-	objectCounters[3] = bitmapDimensions[1]/objectCounters[1];
-	yTrack=0;
-	for(yIndex=0; yIndex<objectCounters[1]; yIndex++)
+
+	//set up polly Points
+	recalcPollyPoints();
+}
+
+function recalcPollyPoints()
+{
+	var degCount=ppCount, subDegCnt=degCount/ppDivCount, innerFrameCnt=0, pSize=pollySize, innerCnt=0;
+	polyPoints = Array();
+	//set up polly Points
+	innerFrameCnt = 0;
+	pSize = pollySize;
+	for(objectTracker=0; objectTracker<360; objectTracker+=(360/degCount))
 	{
-		yTrack = ((yIndex)*objectCounters[3])+objectPadding;
-		for(xIndex=0; xIndex<objectCounters[0]; xIndex++)
+		if(innerFrameCnt%subDegCnt<subDegCnt/2)
 		{
-			tObjects.push([ ((xIndex)*objectCounters[2])+objectPadding, yTrack, oCirc, degCount ]);
-			oCirc+=5;
-			degCount+=360/50;
+			polyPoints.push(pSize/(innerCnt+1));
+			innerCnt++;
 		}
+		else
+		{
+			polyPoints.push(pSize/(innerCnt+1));
+			innerCnt--;
+		}
+		innerFrameCnt++;
 	}
 }
 
 
 function render()
 {	
+	var tempPolyPoints = Array();
+	for(cnt=0; cnt<polyPoints.length; cnt++)
+	{
+		tempPolyPoints.push(polyPoints[cnt]);
+	}
 	
 	subtractiveFade(currFadeLevel);
 	
-	for(cnt=0; cnt<tObjects.length; cnt++)
+	for(cnt=0; cnt<polyDepth; cnt++)
 	{
-		cObjectOne.getRGBA(cIndex%cObjectOne._bandWidth)
-		canvasObject.strokeStyle = cObjectOne._rgba;
-		canvasObject.beginPath();
-		//canvasObject.arc(tObjects[cnt][0], tObjects[cnt][1], tObjects[cnt][2]%amplitude, 0, 2 * Math.PI);
-		drawPolly(tObjects[cnt][0], tObjects[cnt][1], tObjects[cnt][2]%amplitude, cObjectOne._rgba, tObjects[cnt][3]%360, polyCount);
-		canvasObject.stroke();
-		cIndex += colourIncrement;
-		tObjects[cnt][2]+=sizeIncrement;
-		tObjects[cnt][3]+=rotationIncrement;
+		for(objectTracker=0; objectTracker<polyPoints.length; objectTracker++)
+		{
+			if(polyPoints[objectTracker]>cnt){polyPoints[objectTracker]-=cnt;}
+		}
+		cObjectOne.getRGBA(innerCIndex%cObjectOne._bandWidth);
+		drawComplexPolly(bitmapDimensions[0]/2, bitmapDimensions[1]/2, polyPoints, cObjectOne._rgba, framCnt%360, polyPoints.length);
+		innerCIndex+=subColourInc;
 	}
-
-	tObjects[tObjects.length-1][2]+=sizeIncrement;
-	tObjects[tObjects.length-1][3]+=rotationIncrement;
-	for(cnt=tObjects.length-1; cnt>0; cnt--)
-	{
-		tObjects[cnt-1][2] = tObjects[cnt][2];
-		tObjects[cnt-1][3] = tObjects[cnt][3];
-	}
-	
-	//tObjects[objectTracker%tObjects.length][2]+=sizeIncrement;
-	//objectTracker++;
-	
-	
-	/*
-	cObjectOne.getRGBA(cIndex%cObjectOne._bandWidth)
-	canvasObject.strokeStyle = cObjectOne._rgba;
-	drawPolly(bitmapDimensions[0]/2, bitmapDimensions[1]/2, amplitude, cObjectOne._rgba, framCnt%360, 3);
 	cIndex += colourIncrement;
-	framCnt+=2;
-	subtractiveFade(currFadeLevel);
-	*/
+	innerCIndex = cIndex;
+	framCnt++;
+	
+	polyPoints = Array();
+	for(cnt=0; cnt<tempPolyPoints.length; cnt++)
+	{
+		polyPoints.push(tempPolyPoints[cnt]);
+	}
+	
+	document.getElementById("polySize").value = getWave(waveIndex, document.getElementById("polySize").min+50, document.getElementById("polySize").max-1000);
+	document.getElementById("polySize").onchange();
+	waveIndex += lfoSpeed;
+}
+
+function drawComplexPolly(cX, cY, radiusArray, pixColour, rotationAngle, points)
+{
+	if(points<3){return;}
+	var pollyPoints = new Array(), pollyCount=0, pollyAngle=(360/points);
+	//set colour
+	canvasObject.strokeStyle = pixColour;
+	canvasObject.beginPath();
+	//generate polly points
+	for(pollyCount=0; pollyCount<points; pollyCount++)
+	{
+		pollyPoints.push( getCircularPoints(cX, cY, radiusArray[pollyCount], (pollyCount*pollyAngle)+rotationAngle) );
+	}
+	//render point to point
+	for(pollyCount=0; pollyCount<points; pollyCount++)
+	{
+		if(pollyCount+1==points)
+		{
+			canvasObject.moveTo(pollyPoints[pollyCount][0], pollyPoints[pollyCount][1]);
+			canvasObject.lineTo(pollyPoints[0][0], pollyPoints[0][1]);
+		}
+		else
+		{
+			canvasObject.moveTo(pollyPoints[pollyCount][0], pollyPoints[pollyCount][1]);
+			canvasObject.lineTo(pollyPoints[pollyCount+1][0], pollyPoints[pollyCount+1][1]);
+		}
+	}
+	canvasObject.closePath();
+	canvasObject.stroke();
 	
 }
 
@@ -339,6 +381,11 @@ function subtractiveFade(fadeValue)
 {
 		canvasObject.fillStyle = 'rgba(0,0,0,'+fadeValue+')';
 		canvasObject.fillRect(0,0,bitmapDimensions[0],bitmapDimensions[1]);
+}
+
+function getWave(counter, minWave, maxWave)
+{
+	return Math.round( ( Math.sin(counter)*((maxWave-minWave)/2) )+( maxWave-((maxWave-minWave)/2) ) );
 }
 
 
