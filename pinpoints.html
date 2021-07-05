@@ -70,7 +70,7 @@
 				<input type="range" id='incrementLevel' min="1" max="200" value="1" onchange="colourIncrement=parseInt(document.getElementById('incrementLevel').value);" class="sliderClass">
 			</td>
 			<td class=textClass>Line Width<br /><br />
-				<input type="range" id='vShiftLevel' min="1" max="200" value="1" onchange="lineWidth=parseInt(document.getElementById('vShiftLevel').value);" class="sliderClass">
+				<input type="range" id='vShiftLevel' min="1" max="1000" value="1" onchange="lineWidth=parseInt(document.getElementById('vShiftLevel').value);" class="sliderClass">
 			</td>
 			<td class=textClass>Border Colour<br />
 				<input type="range" id='vShiftLevelDown' min="1" max="200" value="1" step="1" onchange="borderColour=parseInt(document.getElementById('vShiftLevelDown').value);" class="sliderClass">
@@ -217,12 +217,12 @@ var objectTracker=0;
 
 
 //Controllers
-var colourIncrement=1;
+var colourIncrement=63;
 var currFadeLevel=0.14;
 var amplitude=200;
 var sizeIncrement=1;
-var lineWidth=1, lineCnt=0;
-var borderColour = cObjectOne._bandWidth;
+var lineWidth=100, lineCnt=0;
+var borderColour = 2052;
 
 function init()
 {
@@ -232,7 +232,8 @@ function init()
 	document.getElementById('bitmap').height = bitmapDimensions[1];
 	document.getElementById('bitmap').style.backgroundColor='rgba(0,0,0,1)';
 	
-	//set max colour bandwidth index
+	document.getElementById('incrementLevel').value = colourIncrement;
+	document.getElementById('vShiftLevel').value = lineWidth;
 	document.getElementById('vShiftLevelDown').max = cObjectOne._bandWidth;
 	document.getElementById('vShiftLevelDown').vaue = borderColour;
 }
